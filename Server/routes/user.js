@@ -1,6 +1,6 @@
 const router = require('express').Router()
 const ctrls = require('../controllers/user')
-const { verifyAccessToken } = require('../middlewares/verifyToken')
+const { verifyAccessToken, isAdmin } = require('../middlewares/verifyToken')
 
 
 router.post('/register',  ctrls.register)
@@ -9,7 +9,10 @@ router.get('/current', verifyAccessToken, ctrls.getCurrent)
 router.post('/refresh-token', ctrls.refreshAccessToken)
 router.get('/logout', ctrls.logout)
 router.get('/forgotpassword', ctrls.forgotPassword)
-
-
+router.post('/reset-password', ctrls.resetPassword)
+router.get('/get-all-users', [verifyAccessToken, isAdmin], ctrls.getAllUsers)
+router.post('/update-user', verifyAccessToken, ctrls.updateUser)
+router.post('/update-user/:uid', [verifyAccessToken, isAdmin], ctrls.updateUserByAdmin)
+router.delete('/delete-user/:uid', [verifyAccessToken, isAdmin], ctrls.deleteUser)
 
 module.exports = router
