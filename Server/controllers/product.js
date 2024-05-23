@@ -158,15 +158,34 @@ const ratings = asyncHandler(async (req, res) => {
 
     // update total rating
     const updatedProduct = await Product.findById(pid)
-    const totalStar = updatedProduct.ratings.reduce((sum, el) => sum + el.star, 0)
+    const totalStar = updatedProduct.ratings.reduce(
+        (sum, el) => sum + el.star,
+        0
+    )
     const sumRatings = updatedProduct.ratings.length
-    
-    updatedProduct.totalRatings = Math.round(totalStar * 10 / sumRatings) / 10
+
+    updatedProduct.totalRatings = Math.round((totalStar * 10) / sumRatings) / 10
     await updatedProduct.save()
 
     return res.status(200).json({
         success: true,
-        updatedProduct
+        updatedProduct,
+    })
+})
+
+// upload image
+const uploadImage = asyncHandler(async (req, res) => {
+    const { pid } = req.params
+    if (!req.files) throw new Error('Missing input')
+    const response = await Product.findByIdAndUpdate(
+        pid,
+        { $push: { images: { $each: req.files.map((el) => el.path) } } },
+        { new: true }
+    )
+
+    return res.status(200).json({
+        status: response ? true : false,
+        updatedProduct: response ? response : 'something went wrong',
     })
 })
 
@@ -177,4 +196,5 @@ module.exports = {
     updateProduct,
     deleteProduct,
     ratings,
+    uploadImage,
 }

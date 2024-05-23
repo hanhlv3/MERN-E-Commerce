@@ -154,17 +154,17 @@ const resetPassword = asyncHandler(async (req, res) => {
     })
 
     if (!user) throw new Error('Invalid user')
-    
+
     user.passwordChangeAt = Date.now()
     user.passwordResetToken = undefined
     user.passwordResetExpires = undefined
     user.password = password
-    
+
     await user.save()
 
     return res.status(200).json({
         success: user ? true : false,
-        mes: user ? 'updated password' : 'Something went wrong' 
+        mes: user ? 'updated password' : 'Something went wrong',
     })
 })
 
@@ -173,43 +173,95 @@ const getAllUsers = asyncHandler(async (req, res) => {
     console.log(users)
     return res.status(200).json({
         success: users ? true : false,
-        users: users ? users : []
+        users: users ? users : [],
     })
 })
 
 const updateUser = asyncHandler(async (req, res) => {
-    const {_id} = req.user
-    if (!_id || Object.keys(req.body).length === 0) throw new Error('Missing input')
-    const response = await User.findByIdAndUpdate(_id, req.body,  { new: true })
-    const {refreshToken, role, password, ...user} = response.toObject()
+    const { _id } = req.user
+    if (!_id || Object.keys(req.body).length === 0)
+        throw new Error('Missing input')
+    const response = await User.findByIdAndUpdate(_id, req.body, { new: true })
+    const { refreshToken, role, password, ...user } = response.toObject()
     return res.status(200).json({
         success: true,
-        userUpdated: user
-    })
-}) 
-
-const updateUserByAdmin =  asyncHandler(async (req, res) => {
-    const {uid} = req.params
-    if (!uid || Object.keys(req.body).length === 0) throw new Error('Missing input')
-
-    const response = await User.findByIdAndUpdate(uid, req.body,  { new: true })
-    const {refreshToken, role, password, ...user} = response.toObject()
-    return res.status(200).json({
-        success: true,
-        userUpdated: user
-    })
-}) 
-
-const deleteUser = asyncHandler(async (req, res) => {
-    const {uid} = req.params
-    const user = await User.findByIdAndDelete(uid).select('-role -refreshToken -password')
-    return res.status(200).json({
-        success: user ? true : false,
-        userDeleted: user ? user : null
+        userUpdated: user,
     })
 })
 
+const updateUserByAdmin = asyncHandler(async (req, res) => {
+    const { uid } = req.params
+    if (!uid || Object.keys(req.body).length === 0)
+        throw new Error('Missing input')
 
+    const response = await User.findByIdAndUpdate(uid, req.body, { new: true })
+    const { refreshToken, role, password, ...user } = response.toObject()
+    return res.status(200).json({
+        success: true,
+        userUpdated: user,
+    })
+})
+
+const deleteUser = asyncHandler(async (req, res) => {
+    const { uid } = req.params
+    const user = await User.findByIdAndDelete(uid).select(
+        '-role -refreshToken -password'
+    )
+    return res.status(200).json({
+        success: user ? true : false,
+        userDeleted: user ? user : null,
+    })
+})
+
+const updateUserAddress = asyncHandler(async (req, res) => {
+    const { _id } = req.user
+    if (!req.body.address) throw new Error('Missing input')
+
+    const response = await User.findByIdAndUpdate(
+        _id,
+        { $push: { address: req.body.address } },
+        { new: true }
+    ).select('-refreshToken -password -role')
+
+    return res.status(200).json({
+        success: response ? true : false,
+        updatedUser: response ? response : 'something went wrong',
+    })
+})
+
+const updateCart = asyncHandler(async (req, res) => {
+    const { _id } = req.user
+    const { pid, quantity, color } = req.body
+    if (!pid || !quantity || !color) throw new Error('Missing input')
+
+    const user = await User.findByIdAndUpdate(_id).select('cart')
+    const alreadyProduct = user?.cart?.find(
+        (el) => el.product.toString() === pid
+    )
+    if (alreadyProduct || alreadyProduct?.color === color) {
+        const response = await User.findOne(
+            { cart: { $elemMatch: alreadyProduct } },
+            { $set: { 'cart.$.quantity': quantity } },
+            { new: true }
+        )
+        return res.status(200).json({
+            success: response ? true : false,
+            updatedUser: response ? response : 'something went wrong',
+        })
+
+    } else {
+        const response = await User.findByIdAndUpdate(
+            _id,
+            { $push: { cart: req.body } },
+            { new: true }
+        )
+
+        return res.status(200).json({
+            success: response ? true : false,
+            updatedUser: response ? response : 'something went wrong',
+        })
+    }
+})
 
 module.exports = {
     register,
@@ -222,5 +274,7 @@ module.exports = {
     getAllUsers,
     updateUser,
     updateUserByAdmin,
-    deleteUser
+    deleteUser,
+    updateUserAddress,
+    updateCart,
 }
